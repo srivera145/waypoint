@@ -7,6 +7,14 @@
     RewriteRule ^ index.php [L]
 </IfModule>
 
+# Browsers refuse a module script served without a JavaScript type, and stock Apache has no
+# type for .mjs (MapLibre GL in public_html/vendor ships as .mjs). The basemap's glyph files are
+# protocol buffers.
+<IfModule mod_mime.c>
+    AddType text/javascript .mjs
+    AddType application/x-protobuf .pbf
+</IfModule>
+
 # Block direct access to dotfiles served from this folder (e.g. .env if ever copied here by mistake).
 <FilesMatch "^\.">
     Require all denied

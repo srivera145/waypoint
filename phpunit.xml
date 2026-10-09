@@ -7,5 +7,9 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <!-- Talks to a real Valhalla at VALHALLA_URL and Photon at PHOTON_URL; each test class skips itself when its server does not answer. -->
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
     </testsuites>
 </phpunit>

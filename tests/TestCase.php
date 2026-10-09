@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests;
 
 use Dotenv\Dotenv;
+use Keel\App\Services\Geocoding\GeocodingProviders;
+use Keel\App\Services\Routing\RoutingProviders;
 use Keel\Core\Auth;
 use Keel\Core\CapturedResponseException;
 use Keel\Core\Csrf;
@@ -76,6 +78,8 @@ abstract class TestCase extends PhpUnitTestCase
     {
         Response::setCaptureMode(false);
         Auth::setUserId(null);
+        RoutingProviders::useForTesting(null);
+        GeocodingProviders::useForTesting(null);
 
         $_SERVER = $this->serverBackup;
         $_GET = $this->getBackup;
@@ -389,7 +393,9 @@ abstract class TestCase extends PhpUnitTestCase
             'jobs',
             'organization_invites',
             'organizations',
+            'place_cache',
             'rate_limits',
+            'route_cache',
             'route_preferences',
             'saved_routes',
             'subscriptions',

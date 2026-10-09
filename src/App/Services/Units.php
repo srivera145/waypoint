@@ -21,6 +21,7 @@ class Units
     public const METRES_PER_INCH = 0.0254;
     public const KG_PER_POUND = 0.45359237;
     public const KG_PER_SHORT_TON = 907.18474;
+    public const METRES_PER_MILE = 1609.344;
 
     private const NUMBER = '(\d+(?:\.\d+)?)';
     private const FEET = "(?:'|ft|feet|foot)";
@@ -132,6 +133,51 @@ class Units
         return number_format((float) $kilograms / self::KG_PER_POUND) . ' lbs';
     }
 
+    /** 4.1 mi, 152 mi or 500 ft for imperial; 6.6 km, 152 km or 800 m for metric. */
+    public static function formatDistance(float $metres, string $system = self::IMPERIAL): string
+    {
+        $metres = abs($metres);
+
+        if (self::normalizeSystem($system) === self::METRIC) {
+            return $metres < 1000
+                ? number_format(round($metres, -1)) . ' m'
+                : self::roundedLarge($metres / 1000) . ' km';
+        }
+
+        $miles = $metres / self::METRES_PER_MILE;
+
+        return $miles < 0.1
+            ? number_format(round($metres / self::METRES_PER_FOOT, -1)) . ' ft'
+            : self::roundedLarge($miles) . ' mi';
+    }
+
+    /** A height above sea level or an amount of climbing: 1,240 ft or 378 m. */
+    public static function formatElevation(float $metres, string $system = self::IMPERIAL): string
+    {
+        return self::normalizeSystem($system) === self::METRIC
+            ? number_format(round($metres)) . ' m'
+            : number_format(round($metres / self::METRES_PER_FOOT)) . ' ft';
+    }
+
+    /** 45 min, 1 h, 1 h 5 min; under half a minute reads "under 1 min". */
+    public static function formatDuration(float $seconds): string
+    {
+        $minutes = (int) round(abs($seconds) / 60);
+
+        if ($minutes === 0) {
+            return 'under 1 min';
+        }
+
+        if ($minutes < 60) {
+            return $minutes . ' min';
+        }
+
+        $hours = intdiv($minutes, 60);
+        $rest = $minutes % 60;
+
+        return $hours . ' h' . ($rest > 0 ? ' ' . $rest . ' min' : '');
+    }
+
     /** Example inputs for help text, in the order a user of that system would reach for them. */
     public static function lengthExamples(string $system = self::IMPERIAL): string
     {
@@ -160,6 +206,12 @@ class Units
         $text = preg_replace('/(?<=\d),(?=\d)/', '.', $text) ?? $text;
 
         return trim((string) preg_replace('/\s+/', ' ', $text));
+    }
+
+    /** One decimal under 10 (4.1), whole numbers with separators above (152, 1,204). */
+    private static function roundedLarge(float $value): string
+    {
+        return $value < 9.95 ? number_format($value, 1) : number_format(round($value));
     }
 
     private static function trimDecimals(string $number): string

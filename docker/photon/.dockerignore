@@ -1,0 +1,5 @@
+# Only the Dockerfile, entrypoint.sh and region_filter.py go into the image. data/ holds
+# gigabytes of downloads and databases when PHOTON_DATA bind-mounts it.
+data/
+.env
+*.md

@@ -1,0 +1,17 @@
+# Cuts Waypoint's basemap out of the Protomaps planet build: a one-off job, not a service.
+# Every setting comes from .env beside this file: copy .env.example to .env first.
+#   docker compose run --rm extract
+# writes ../../storage/maps/<TILES_REGION>.pmtiles. See ../README.md, "Map tiles".
+name: waypoint-tiles
+
+services:
+  extract:
+    image: protomaps/go-pmtiles:${PMTILES_IMAGE_TAG:?Set PMTILES_IMAGE_TAG in docker/tiles/.env}
+    volumes:
+      - ../../storage/maps:/maps
+    command:
+      - extract
+      - ${TILES_SOURCE_URL:?Set TILES_SOURCE_URL in docker/tiles/.env}
+      - /maps/${TILES_REGION:?Set TILES_REGION in docker/tiles/.env}.pmtiles
+      - --bbox=${TILES_BBOX:?Set TILES_BBOX in docker/tiles/.env}
+      - --download-threads=4

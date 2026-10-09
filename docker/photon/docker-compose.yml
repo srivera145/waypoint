@@ -1,0 +1,43 @@
+# Photon geocoder for Waypoint, built for the same region as docker/valhalla.
+# Every setting comes from .env beside this file: copy .env.example to .env first.
+# See README.md for build and run steps.
+name: waypoint-photon
+
+services:
+  photon:
+    build:
+      context: .
+      args:
+        PHOTON_VERSION: ${PHOTON_VERSION:?Set PHOTON_VERSION in docker/photon/.env}
+        PHOTON_SHA256: ${PHOTON_SHA256:?Set PHOTON_SHA256 in docker/photon/.env}
+    # Tagged with the Photon version: a database built by one major release isn't guaranteed
+    # to load in another.
+    image: waypoint-photon:${PHOTON_VERSION}
+    container_name: waypoint-photon
+    restart: unless-stopped
+    ports:
+      - "${PHOTON_BIND:-127.0.0.1}:${PHOTON_PORT:-2322}:2322"
+    volumes:
+      # A named volume by default; set PHOTON_DATA to a folder (./data) to bind-mount.
+      - ${PHOTON_DATA:-photon_data}:/photon
+    environment:
+      # Each region builds in its own folder under /photon, so moving from Utah to the whole US
+      # is a config change and the Utah build stays where it is.
+      PHOTON_REGION: ${PHOTON_REGION:?Set PHOTON_REGION in docker/photon/.env}
+      PHOTON_DUMP_URL: ${PHOTON_DUMP_URL:?Set PHOTON_DUMP_URL in docker/photon/.env}
+      PHOTON_BBOX: ${PHOTON_BBOX:-}
+      PHOTON_LANGUAGES: ${PHOTON_LANGUAGES:-en}
+      PHOTON_JAVA_OPTS: ${PHOTON_JAVA_OPTS:--Xmx2g}
+      PHOTON_THREADS: ${PHOTON_THREADS:-2}
+      # Quoted: the entrypoint compares against the exact string "True".
+      PHOTON_FORCE_REIMPORT: "${PHOTON_FORCE_REIMPORT:-False}"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:2322/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      # The first start downloads and imports; don't call it unhealthy meanwhile.
+      start_period: 6h
+
+volumes:
+  photon_data:

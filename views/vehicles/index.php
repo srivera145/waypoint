@@ -10,6 +10,7 @@ $vehicles = $vehicles ?? [];
 $unitSystem = $unitSystem ?? Units::IMPERIAL;
 $status = $status ?? null;
 $error = $error ?? null;
+$returnTo = $returnTo ?? null;
 $unitChoices = [Units::IMPERIAL => 'Imperial (ft, lbs)', Units::METRIC => 'Metric (m, kg)'];
 ?>
 <!DOCTYPE html>
@@ -26,6 +27,9 @@ $unitChoices = [Units::IMPERIAL => 'Imperial (ft, lbs)', Units::METRIC => 'Metri
                 <nav aria-label="Breadcrumb">
                     <ol class="breadcrumb">
                         <li><a href="/dashboard">Home</a></li>
+                        <?php if ($returnTo !== null): ?>
+                        <li><a href="<?= htmlspecialchars($returnTo) ?>">Map</a></li>
+                        <?php endif; ?>
                         <li><span aria-current="page">Vehicles</span></li>
                     </ol>
                 </nav>
@@ -33,6 +37,16 @@ $unitChoices = [Units::IMPERIAL => 'Imperial (ft, lbs)', Units::METRIC => 'Metri
             </div>
             <?php $themeToggleClass = 'push'; require __DIR__ . '/../partials/theme-toggle.php'; ?>
         </header>
+
+        <?php if ($returnTo !== null): ?>
+        <div class="alert alert-info">
+            <?= Deck::icon('info') ?>
+            <div class="alert-body">
+                <p>Choose the vehicle for this trip. You'll go back to the map and the route will be planned again for it.</p>
+                <a class="btn btn-sm" href="<?= htmlspecialchars($returnTo) ?>"><?= Deck::icon('arrow-left-sm', 'icon icon-sm') ?> Back to the map</a>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <?php if (is_string($status)): ?>
         <div class="alert alert-good" role="status">
@@ -88,6 +102,9 @@ $unitChoices = [Units::IMPERIAL => 'Imperial (ft, lbs)', Units::METRIC => 'Metri
                     <?php else: ?>
                     <form method="POST" action="/vehicles/<?= (int) $vehicle['id'] ?>/activate">
                         <?= Csrf::field() ?>
+                        <?php if ($returnTo !== null): ?>
+                        <input type="hidden" name="return_to" value="<?= htmlspecialchars($returnTo) ?>">
+                        <?php endif; ?>
                         <button type="submit" class="btn btn-sm btn-soft">Use<span class="sr-only"> <?= htmlspecialchars((string) $vehicle['name']) ?></span></button>
                     </form>
                     <?php endif; ?>

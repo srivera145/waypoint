@@ -124,6 +124,36 @@
      flush to the screen edge on load and scrolls the gutter out of view. Matching
      scroll-padding to the padding keeps the first child on the gutter. */
   .scroller { scroll-padding-inline: var(--space-gutter); }
+
+  /* One route option: the whole card is a toggle button. aria-pressed marks the selected
+     route, the one drawn bold on the map. The card's own border thickens rather than adding
+     an outline, so the selection and the focus ring never look alike. */
+  .route-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    inline-size: 100%;
+    padding: var(--space-3) var(--space-4);
+    border: 2px solid var(--line);
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+    transition: border-color var(--dur-1) var(--ease-out), background-color var(--dur-1) var(--ease-out);
+  }
+  .route-card:is(button):hover { background: var(--surface-hover); }
+  /* A saved route's summary uses the same card, but it is not something to press. */
+  .route-card:not(button) { cursor: auto; }
+  .route-card[aria-pressed="true"] { border-color: var(--brand); }
+  .route-card .badge { align-self: start; }
+  .route-card-time { font-size: var(--text-lg); align-items: baseline; }
+  .route-skeleton { block-size: 6.5rem; border-radius: var(--r-md); }
+
+  /* The elevation profile under the selected route. The SVG stretches to its box
+     (preserveAspectRatio="none"), and the line keeps a constant width as it does. */
+  .elevation-chart { display: block; inline-size: 100%; block-size: 5rem; overflow: visible; }
+  .elevation-area { fill: color-mix(in oklab, var(--brand) 16%, transparent); }
+  .elevation-line { fill: none; stroke: var(--brand); stroke-width: 2; stroke-linejoin: round; }
 }
 
 @layer app.pages {
@@ -167,5 +197,156 @@
   .app-page {
     --container: 40rem;
     padding-block: var(--space-6) var(--space-10);
+  }
+
+  /* The map screen (and a saved route's): the map fills the viewport. On a phone the search
+     panel floats over its top and the route sheet over its bottom, and the sheet never
+     collapses past --sheet-collapsed, so some map always shows between the two. From 64rem
+     the panel and sheet become one column beside the map instead.
+
+     map.js keeps --map-top-height and --sheet-height current, so the locate button and
+     MapLibre's attribution stay in the uncovered part of the map. */
+  .map-screen {
+    --map-gap: var(--space-3);
+    --sheet-collapsed: 46dvh;
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    isolation: isolate;
+    background: var(--bg-sunken);
+  }
+  .map-canvas { position: absolute; inset: 0; }
+
+  .map-top {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 3;
+    padding: max(var(--map-gap), env(safe-area-inset-top)) var(--map-gap) 0;
+    /* Only the panel takes taps; the strip of map beside it still pans. */
+    pointer-events: none;
+  }
+  .map-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-inline-size: 40rem;
+    margin-inline: auto;
+    padding: var(--space-2);
+    pointer-events: auto;
+  }
+  /* A scroller bleeds into the page gutter; inside the panel there is none. */
+  .map-chips { --gap: var(--space-2); margin-inline: 0; padding-inline: 0; padding-block-end: 0; }
+  .map-results {
+    max-block-size: min(50dvh, 24rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .map-results .list-row { cursor: pointer; }
+  .map-results .list-row[aria-selected="true"] { background: var(--surface-hover); }
+  .map-results-status { padding: var(--space-2) var(--space-3); }
+  .map-results-status:empty { display: none; }
+
+  .map-locate {
+    position: absolute;
+    z-index: 1;
+    inset-inline-end: var(--map-gap);
+    inset-block-end: calc(var(--sheet-height, 0px) + var(--map-gap));
+    inline-size: var(--control-h-lg);
+    block-size: var(--control-h-lg);
+    box-shadow: var(--shadow-2);
+    transition: inset-block-end var(--dur-3) var(--ease-out);
+  }
+
+  .map-fallback {
+    position: absolute;
+    z-index: 1;
+    inset-inline: var(--map-gap);
+    inset-block-start: calc(var(--map-top-height, 8rem) + var(--map-gap));
+  }
+
+  .map-sheet {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    max-block-size: var(--sheet-collapsed);
+    background: var(--surface);
+    border-start-start-radius: var(--r-lg);
+    border-start-end-radius: var(--r-lg);
+    box-shadow: var(--shadow-4);
+    transition: max-block-size var(--dur-3) var(--ease-out), block-size var(--dur-3) var(--ease-out);
+  }
+  .map-sheet[data-state="peek"] { max-block-size: var(--sheet-peek, 7rem); }
+  .map-sheet[data-state="expanded"] {
+    block-size: calc(100dvh - var(--map-top-height, 8rem) - var(--map-gap));
+    max-block-size: calc(100dvh - var(--map-top-height, 8rem) - var(--map-gap));
+  }
+  .map-sheet[data-dragging] { transition: none; }
+  /* The grip and header drag the sheet; touch-action hands the gesture to map.js. */
+  .map-sheet-handle { flex: 0 0 auto; touch-action: none; cursor: grab; }
+  .map-sheet[data-dragging] .map-sheet-handle { cursor: grabbing; }
+  .map-sheet-handle .sheet-header { padding-block-start: 0; }
+  .map-sheet-toggle .icon { transition: rotate var(--dur-2) var(--ease-out); }
+  .map-sheet[data-state="expanded"] .map-sheet-toggle .icon { rotate: 180deg; }
+  .map-sheet-body {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 var(--space-5) calc(var(--space-6) + env(safe-area-inset-bottom));
+  }
+  /* The message and route slots are empty until map.js fills them; empty, they take no gap. */
+  .map-sheet-body > :empty { display: none; }
+
+  /* MapLibre's corner controls (the attribution) keep to the uncovered part of the map. */
+  .map-screen :is(.maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right) {
+    bottom: var(--sheet-height, 0px);
+    transition: bottom var(--dur-3) var(--ease-out);
+  }
+  .map-screen :is(.maplibregl-ctrl-top-left, .maplibregl-ctrl-top-right) { top: var(--map-top-height, 0px); }
+
+  /* This screen is used from a driver's seat: every control is at least the 44px target
+     tall, not just its hit area. */
+  .map-screen .segmented > *,
+  .map-screen .chip { min-block-size: var(--tap); }
+
+  @media (min-width: 64rem) {
+    .map-screen {
+      display: grid;
+      grid-template-columns: 26rem 1fr;
+      grid-template-rows: auto 1fr;
+    }
+    .map-canvas { position: relative; grid-column: 2; grid-row: 1 / -1; }
+    .map-top {
+      position: relative;
+      grid-column: 1;
+      grid-row: 1;
+      padding: var(--map-gap);
+      background: var(--surface);
+      border-inline-end: 1px solid var(--line);
+      pointer-events: auto;
+    }
+    .map-panel { max-inline-size: none; box-shadow: none; border: 0; padding: 0; }
+    .map-sheet,
+    .map-sheet[data-state] {
+      position: relative;
+      grid-column: 1;
+      grid-row: 2;
+      block-size: auto;
+      max-block-size: none;
+      min-block-size: 0;
+      border-radius: 0;
+      border-inline-end: 1px solid var(--line);
+      box-shadow: none;
+    }
+    .map-sheet-handle { cursor: auto; touch-action: auto; }
+    .map-sheet-handle .sheet-grip,
+    .map-sheet-toggle { display: none; }
+    .map-sheet-handle .sheet-header { padding-block-start: var(--space-4); }
+    .map-locate { inset-block-end: var(--map-gap); }
+    .map-fallback { inset-inline-start: calc(26rem + var(--map-gap)); inset-block-start: var(--map-gap); }
+    .map-screen :is(.maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right) { bottom: 0; }
+    .map-screen :is(.maplibregl-ctrl-top-left, .maplibregl-ctrl-top-right) { top: 0; }
   }
 }

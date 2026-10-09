@@ -38,6 +38,22 @@ class Session
         unset($_SESSION[$key]);
     }
 
+    /**
+     * Ends this request's hold on the session. PHP locks the session file from start to end of
+     * a request, so a slow request (planning a route) or many parallel ones (map tiles) would
+     * make the user's other requests queue behind it. Reads still work afterwards; changes made
+     * afterwards are not saved.
+     *
+     * Under the test harness the session stays open: every test shares one process, and PHP
+     * cannot reopen a session once output has started.
+     */
+    public static function release(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE && !Response::capturing()) {
+            session_write_close();
+        }
+    }
+
     public static function regenerate(): void
     {
         session_regenerate_id(true);

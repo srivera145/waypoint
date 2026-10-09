@@ -66,19 +66,70 @@ class Response
         exit;
     }
 
+    /**
+     * Sends $length bytes of a file from $offset, in chunks, so a large file never sits in
+     * memory. Under the test harness the bytes become the captured body instead.
+     */
+    public static function file(string $path, int $offset, int $length, int $status = 200, array $headers = []): never
+    {
+        $handle = fopen($path, 'rb');
+
+        if ($handle === false || ($offset > 0 && fseek($handle, $offset) !== 0)) {
+            throw new \RuntimeException('Could not read ' . basename($path));
+        }
+
+        if (self::$captureMode) {
+            $body = $length > 0 ? (string) fread($handle, $length) : '';
+            fclose($handle);
+
+            throw new CapturedResponseException($status, $headers, $body);
+        }
+
+        self::setStatus($status);
+
+        foreach ($headers as $name => $value) {
+            header((string) $name . ': ' . (string) $value);
+        }
+
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        $remaining = $length;
+
+        while ($remaining > 0 && !feof($handle) && !connection_aborted()) {
+            $chunk = fread($handle, min(1048576, $remaining));
+
+            if ($chunk === false || $chunk === '') {
+                break;
+            }
+
+            echo $chunk;
+            flush();
+            $remaining -= strlen($chunk);
+        }
+
+        fclose($handle);
+        exit;
+    }
+
     private static function setStatus(int $status): void
     {
         $protocol = $_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.1';
         $texts = [
             200 => 'OK',
+            206 => 'Partial Content',
             302 => 'Found',
             400 => 'Bad Request',
             401 => 'Unauthorized',
             402 => 'Payment Required',
             404 => 'Not Found',
+            416 => 'Range Not Satisfiable',
             419 => 'Page Expired',
+            422 => 'Unprocessable Content',
             429 => 'Too Many Requests',
             500 => 'Internal Server Error',
+            503 => 'Service Unavailable',
         ];
 
         if ($status !== 419) {

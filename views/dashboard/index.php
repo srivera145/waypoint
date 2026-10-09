@@ -14,13 +14,13 @@ $isCustom = $isCustom ?? false;
 $showCustom = $showCustom ?? false;
 $customPersonalities = array_diff(RoutePreference::PERSONALITIES, RoutePreference::PRIMARY_PERSONALITIES);
 
-// Placeholders until search, saved places and trip planning arrive.
+// Plan a Trip opens the map; the rest are placeholders until saved places and the assistant arrive.
 $quickActions = [
-    'home' => 'Home',
-    'map-pin' => 'Work',
-    'star' => 'Favorites',
-    'calendar' => 'Plan a Trip',
-    'sparkle' => 'Ask Waypoint',
+    ['icon' => 'home', 'label' => 'Home', 'href' => null],
+    ['icon' => 'map-pin', 'label' => 'Work', 'href' => null],
+    ['icon' => 'star', 'label' => 'Favorites', 'href' => null],
+    ['icon' => 'calendar', 'label' => 'Plan a Trip', 'href' => '/map'],
+    ['icon' => 'sparkle', 'label' => 'Ask Waypoint', 'href' => null],
 ];
 
 $overallLength = $vehicle !== null ? Vehicle::overallLength($vehicle) : null;
@@ -44,21 +44,27 @@ $includesTrailer = $overallLength !== null && (float) $overallLength !== (float)
             </form>
         </header>
 
-        <div class="search" role="search">
+        <form class="search" role="search" method="GET" action="/map">
             <?= Deck::icon('search') ?>
             <label class="sr-only" for="place-search">Search for a place or address</label>
-            <input type="search" id="place-search" class="input" placeholder="Where to?" autocomplete="off" aria-describedby="place-search-note">
-            <p id="place-search-note" class="sr-only">Search is not available yet.</p>
-        </div>
+            <input type="search" id="place-search" name="q" class="input" placeholder="Where to?" autocomplete="off" enterkeyhint="search" maxlength="200">
+        </form>
 
         <section aria-label="Quick actions">
             <ul class="scroller" role="list" style="--gap: var(--space-2)">
-                <?php foreach ($quickActions as $icon => $label): ?>
+                <?php foreach ($quickActions as $action): ?>
                 <li>
+                    <?php if ($action['href'] !== null): ?>
+                    <a class="btn btn-sm btn-soft btn-round" href="<?= htmlspecialchars($action['href']) ?>">
+                        <?= Deck::icon($action['icon'] . '-sm', 'icon icon-sm') ?>
+                        <?= htmlspecialchars($action['label']) ?>
+                    </a>
+                    <?php else: ?>
                     <button type="button" class="btn btn-sm btn-soft btn-round" aria-disabled="true" title="Coming soon">
-                        <?= Deck::icon($icon . '-sm', 'icon icon-sm') ?>
-                        <?= htmlspecialchars($label) ?>
+                        <?= Deck::icon($action['icon'] . '-sm', 'icon icon-sm') ?>
+                        <?= htmlspecialchars($action['label']) ?>
                     </button>
+                    <?php endif; ?>
                 </li>
                 <?php endforeach; ?>
             </ul>

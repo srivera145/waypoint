@@ -9,3 +9,10 @@ storage/logs/*
 !storage/logs/.gitkeep
 .phpunit.cache/
 .DS_Store
+/docker/valhalla/.env
+/docker/valhalla/custom_files/
+storage/maps/*
+!storage/maps/.gitkeep
+/docker/photon/.env
+/docker/photon/data/
+/docker/tiles/.env

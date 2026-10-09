@@ -84,6 +84,15 @@ class SavedRoute
         return (int) Database::connection()->lastInsertId();
     }
 
+    /** False when the route is not the user's. Renaming to the same name still counts as found. */
+    public static function rename(int $id, int $userId, string $name): bool
+    {
+        $statement = Database::connection()->prepare('UPDATE saved_routes SET name = ? WHERE id = ? AND user_id = ?');
+        $statement->execute([$name, $id, $userId]);
+
+        return $statement->rowCount() > 0 || self::findForUser($id, $userId) !== null;
+    }
+
     public static function delete(int $id, int $userId): bool
     {
         $statement = Database::connection()->prepare('DELETE FROM saved_routes WHERE id = ? AND user_id = ?');

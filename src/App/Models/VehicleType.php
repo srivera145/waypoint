@@ -120,6 +120,9 @@ class VehicleType
 
     public const DEFAULT_TYPE = 'car';
 
+    /** Big enough that low bridges and weight limits decide the route. */
+    private const LARGE_TYPES = ['rv', 'truck', 'truck_trailer'];
+
     /** @return array<string, array> every type keyed by its value, in display order */
     public static function all(): array
     {
@@ -139,6 +142,11 @@ class VehicleType
     public static function emoji(string $type): string
     {
         return self::TYPES[$type]['emoji'] ?? '🚗';
+    }
+
+    public static function isLarge(string $type): bool
+    {
+        return in_array($type, self::LARGE_TYPES, true);
     }
 
     public static function trailerMode(string $type): string

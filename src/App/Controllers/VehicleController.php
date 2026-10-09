@@ -5,6 +5,7 @@ namespace Keel\App\Controllers;
 use Keel\App\Models\User;
 use Keel\App\Models\Vehicle;
 use Keel\App\Models\VehicleType;
+use Keel\App\Services\Maps\MapScreen;
 use Keel\App\Services\Units;
 use Keel\App\Services\VehicleService;
 use Keel\Core\Auth;
@@ -37,6 +38,8 @@ class VehicleController extends Controller
             'unitSystem' => Units::normalizeSystem($user['unit_system'] ?? null),
             'status' => self::STATUS_MESSAGES[(string) $request->input('status', '')] ?? null,
             'error' => self::ERROR_MESSAGES[(string) $request->input('error', '')] ?? null,
+            // Opened from the map's vehicle chip: switching sends them back to the same trip.
+            'returnTo' => MapScreen::returnPath($request->input('return_to')),
         ]);
     }
 
@@ -127,8 +130,10 @@ class VehicleController extends Controller
             ErrorHandler::render(404);
         }
 
-        // The home screen's vehicle card can switch and land back home; anywhere else returns to the list.
-        $this->redirect((string) $request->input('return_to', '') === '/dashboard' ? '/dashboard' : '/vehicles?status=activated');
+        // The home screen's vehicle card and the map's vehicle chip land back where they came
+        // from; anywhere else returns to the list.
+        $returnTo = (string) $request->input('return_to', '') === '/dashboard' ? '/dashboard' : MapScreen::returnPath($request->input('return_to'));
+        $this->redirect($returnTo ?? '/vehicles?status=activated');
     }
 
     private function renderForm(array $user, ?array $vehicle, array $values, array $errors, bool $makeActive = false): void

@@ -11,12 +11,17 @@ use Keel\App\Controllers\FileController;
 use Keel\App\Controllers\HealthController;
 use Keel\App\Controllers\LlmsTxtController;
 use Keel\App\Controllers\ManifestController;
+use Keel\App\Controllers\MapController;
 use Keel\App\Controllers\OrganizationController;
+use Keel\App\Controllers\PlaceController;
 use Keel\App\Controllers\RobotsController;
+use Keel\App\Controllers\RouteController;
 use Keel\App\Controllers\RoutePreferenceController;
+use Keel\App\Controllers\SavedRouteController;
 use Keel\App\Controllers\SitemapController;
 use Keel\App\Controllers\SuperAdminController;
 use Keel\App\Controllers\ThemeController;
+use Keel\App\Controllers\TileController;
 use Keel\App\Controllers\StripeWebhookController;
 use Keel\App\Controllers\UnitSystemController;
 use Keel\App\Controllers\VehicleController;
@@ -39,6 +44,9 @@ $router->get('/manifest.webmanifest', [ManifestController::class, 'index']);
 $router->get('/sitemap.xml', [SitemapController::class, 'index']);
 $router->get('/robots.txt', [RobotsController::class, 'index']);
 $router->get('/llms.txt', [LlmsTxtController::class, 'index']);
+
+// The basemap: public OpenStreetMap data, served by byte range. No session or login needed.
+$router->get('/tiles/basemap.pmtiles', [TileController::class, 'basemap']);
 
 $router->group(['middleware' => [CsrfMiddleware::class]], function ($router) use ($multiTenancyEnabled) {
     $router->get('/', [WelcomeController::class, 'index'], ['sitemap' => true]);
@@ -98,6 +106,19 @@ $router->group(['middleware' => [CsrfMiddleware::class]], function ($router) use
             $router->post('/vehicles/{id}/update', [VehicleController::class, 'update']);
             $router->post('/vehicles/{id}/delete', [VehicleController::class, 'destroy']);
             $router->post('/vehicles/{id}/activate', [VehicleController::class, 'activate']);
+
+            $router->get('/map', [MapController::class, 'index']);
+
+            $router->get('/routes', [SavedRouteController::class, 'index']);
+            $router->get('/routes/{id}', [SavedRouteController::class, 'show']);
+            $router->post('/routes/{id}/rename', [SavedRouteController::class, 'rename']);
+            $router->post('/routes/{id}/delete', [SavedRouteController::class, 'destroy']);
+
+            // Session-authenticated JSON for the app's own pages: send X-CSRF-Token with a POST.
+            $router->post('/api/routes', [RouteController::class, 'store']);
+            $router->post('/api/saved-routes', [SavedRouteController::class, 'store']);
+            $router->get('/api/places/search', [PlaceController::class, 'search']);
+            $router->get('/api/places/reverse', [PlaceController::class, 'reverse']);
 
             $router->get('/billing/upgrade', [BillingController::class, 'showPlans']);
             $router->get('/billing/success', [BillingController::class, 'success']);

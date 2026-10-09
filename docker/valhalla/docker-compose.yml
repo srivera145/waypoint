@@ -1,0 +1,44 @@
+# Valhalla routing engine for Waypoint, with elevation tiles so /height works.
+# Every setting comes from .env beside this file: copy .env.example to .env first.
+# See README.md for build and run steps.
+name: waypoint-valhalla
+
+services:
+  valhalla:
+    # Pinned, not :latest: tiles built by one Valhalla release are not guaranteed to load in
+    # another, and a silent upgrade would rebuild or break them.
+    image: ghcr.io/valhalla/valhalla-scripted:${VALHALLA_IMAGE_TAG:?Set VALHALLA_IMAGE_TAG in docker/valhalla/.env}
+    container_name: waypoint-valhalla
+    restart: unless-stopped
+    ports:
+      - "${VALHALLA_BIND:-127.0.0.1}:${VALHALLA_PORT:-8002}:8002"
+    volumes:
+      # A named volume by default; set VALHALLA_DATA to a folder (./custom_files) to bind-mount.
+      - ${VALHALLA_DATA:-valhalla_data}:/custom_files
+    environment:
+      # PBF to build from (space-separate several). Downloaded only when the region's folder
+      # has no .pbf yet.
+      tile_urls: ${VALHALLA_PBF_URL:?Set VALHALLA_PBF_URL in docker/valhalla/.env}
+      # Each region builds in its own folder under /custom_files, so moving from Utah to the
+      # whole US is a config change and the Utah build stays where it is.
+      path_extension: ${VALHALLA_REGION:?Set VALHALLA_REGION in docker/valhalla/.env}
+      build_elevation: "True"
+      build_admins: "True"
+      build_time_zones: "True"
+      build_tar: "True"
+      use_tiles_ignore_pbf: "True"
+      # Quoted: the image compares against the exact string "True", and YAML would turn an
+      # unquoted True into a boolean that compose passes on as "true".
+      force_rebuild: "${VALHALLA_FORCE_REBUILD:-False}"
+      server_threads: "${VALHALLA_THREADS:-4}"
+      serve_tiles: "True"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8002/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      # The first build of a large region takes hours; don't call it unhealthy meanwhile.
+      start_period: 6h
+
+volumes:
+  valhalla_data:

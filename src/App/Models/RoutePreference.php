@@ -25,6 +25,22 @@ class RoutePreference
         'rv' => 'RV-friendly',
     ];
 
+    /** What applies when a user has no preferences row at all: the table's column defaults. */
+    public const DEFAULTS = [
+        'personality' => self::DEFAULT_PERSONALITY,
+        'avoid_tolls' => 0,
+        'avoid_highways' => 0,
+        'avoid_ferries' => 0,
+        'avoid_mountains' => 0,
+        'max_grade_pct' => null,
+    ];
+
+    /** The preferences to route a vehicle with: its own row, else the user's default, else DEFAULTS. */
+    public static function effectiveForVehicle(int $vehicleId, int $userId): array
+    {
+        return self::forVehicle($vehicleId, $userId) ?? self::forUser($userId) ?? self::DEFAULTS;
+    }
+
     /** The user's default preferences: the row that belongs to no vehicle. */
     public static function forUser(int $userId): ?array
     {

@@ -130,4 +130,31 @@ class UnitsTest extends TestCase
             self::assertSame($display, Units::formatWeight(round($parsed, 2), Units::METRIC), $display);
         }
     }
+
+    public function testDistancesReadInMilesOrKilometres(): void
+    {
+        self::assertSame('33 mi', Units::formatDistance(53300), 'Whole units from 10 up.');
+        self::assertSame('6.2 mi', Units::formatDistance(10000));
+        self::assertSame('0.6 mi', Units::formatDistance(1000));
+        self::assertSame('152 mi', Units::formatDistance(244620));
+        self::assertSame('330 ft', Units::formatDistance(100));
+        self::assertSame('1,204 mi', Units::formatDistance(1937650));
+
+        self::assertSame('53 km', Units::formatDistance(53300, Units::METRIC));
+        self::assertSame('6.6 km', Units::formatDistance(6600, Units::METRIC));
+        self::assertSame('1.0 km', Units::formatDistance(1000, Units::METRIC));
+        self::assertSame('800 m', Units::formatDistance(803, Units::METRIC));
+        self::assertSame('152 km', Units::formatDistance(152000, Units::METRIC));
+    }
+
+    public function testElevationsAndDurations(): void
+    {
+        self::assertSame('7,034 ft', Units::formatElevation(2144));
+        self::assertSame('2,144 m', Units::formatElevation(2144, Units::METRIC));
+
+        self::assertSame('36 min', Units::formatDuration(2157));
+        self::assertSame('1 h', Units::formatDuration(3600));
+        self::assertSame('1 h 5 min', Units::formatDuration(3900));
+        self::assertSame('under 1 min', Units::formatDuration(20));
+    }
 }
